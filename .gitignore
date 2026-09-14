@@ -1,0 +1,23 @@
+# Secrets -- never commit an API key
+.env
+.env.*
+*.key
+*.pem
+
+# Generated data. Samples that ARE committed live in docs/.
+data/*.csv
+data/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+*.egg-info/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

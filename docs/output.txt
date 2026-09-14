@@ -1,0 +1,438 @@
+Captured session for nrl-odds-api-python
+Run on 2026-09-15 (AEST) against https://api.puntersedge.online/v1
+python3 --version: Python 3.9.6
+Every command below was actually executed; this file is the terminal transcript.
+The API key was supplied via the PE_API_KEY environment variable and never appears here.
+
+================================================================
+1. Offline self-checks (no network, no key)
+================================================================
+
+$ python3 selftest.py
+-- team-name matching (real strings from six books) --
+ok    Sydney Roosters -> 'home'
+ok    Syd Roosters -> 'home'
+ok    Cronulla-Sutherland Sharks -> 'away'
+ok    Cronulla Sharks -> 'away'
+ok    Cronulla -> 'away'
+ok    New Zealand Warriors -> 'home'
+ok    Warriors -> 'home'
+ok    Newcastle Knights -> 'away'
+ok    Newcastle -> 'away'
+-- totals, three-way markets, and unmatchable --
+ok    Over -> 'over'
+ok    Under -> 'under'
+ok    Draw -> 'draw'
+ok    The Draw -> 'draw'
+ok    empty -> 'unknown'
+ok    nonsense -> 'unknown'
+
+-- flatten_keyed (bare array) --
+ok    row count -> 2
+ok    point is kept -> [7.5, 45.5]
+ok    side -> {'over'}
+ok    age carried through -> 147
+ok    columns -> True
+
+-- flatten_demo (envelope) --
+ok    row count -> 2
+ok    synthetic id is stable -> 'demo-0564ae638f8b'
+ok    id is marked demo -> True
+ok    sides resolved -> ['home', 'away']
+ok    columns -> True
+ok    envelope != bare array -> []
+
+-- RFC 9457 problem+json --
+ok    problem json parsed -> True
+ok    non-json tolerated -> 'HTTP 502'
+
+All checks passed.
+
+================================================================
+2. Keyless demo path -- no API key, 0 credits
+================================================================
+
+$ python3 fetch_nrl.py --demo -o data/demo_odds.csv
+source        /v1/demo/best-odds?sport=nrl
+credit cost   0 (demo endpoint, no key required)
+rows          6
+fixtures      3
+bookmakers    5 (betright, ladbrokes_au, palmerbet, sportsbet, tab)
+markets       h2h=6
+written       data/demo_odds.csv
+
+$ head -4 data/demo_odds.csv
+event_id,commence_time,home,away,bookmaker,market,selection,selection_side,point,price,book_last_update,book_age_seconds,fetched_at
+demo-817965461287,2026-09-16T02:00:00Z,New Zealand Warriors,Newcastle Knights,palmerbet,h2h,New Zealand Warriors,home,,1.48,,,2026-09-14T23:33:29Z
+demo-817965461287,2026-09-16T02:00:00Z,New Zealand Warriors,Newcastle Knights,sportsbet,h2h,Newcastle Knights,away,,2.76,,,2026-09-14T23:33:29Z
+demo-0564ae638f8b,2026-09-18T09:00:00Z,Warriors,Newcastle,betright,h2h,Warriors,home,,1.5,,,2026-09-14T23:33:29Z
+
+$ python3 analysis.py data/demo_odds.csv
+source        data/demo_odds.csv
+market        h2h
+comparisons   0 of 6 selection(s) priced by >= 2 book(s), across 3 fixture(s)
+skipped       6 selection(s) priced by only one book
+
+Nothing to compare: every selection in this file carries a price from a
+single bookmaker only.
+
+That is the expected result for a --demo CSV. The keyless demo endpoint
+returns the BEST price per selection, not each book's price, so there is
+no dispersion in it to measure. Fetch with an API key to compare books:
+  export PE_API_KEY=...
+  python3 fetch_nrl.py --markets h2h -o data/nrl_odds.csv
+  python3 analysis.py data/nrl_odds.csv
+
+Free key (1,500 credits/month, no card):
+  https://puntersedge.online/api?utm_source=nrl-odds-api-python&utm_medium=code
+
+================================================================
+3. Keyed path -- PE_API_KEY set
+================================================================
+
+$ python3 fetch_nrl.py --markets h2h,spreads,totals -o data/nrl_odds.csv
+source        /v1/sports/nrl/odds?markets=h2h,spreads,totals
+credit cost   3
+rows          52
+fixtures      2
+bookmakers    6 (betright, ladbrokes_au, palmerbet, pointsbetau, sportsbet, tab)
+markets       h2h=24, spreads=12, totals=16
+written       data/nrl_odds.csv
+
+$ head -8 data/nrl_odds.csv
+event_id,commence_time,home,away,bookmaker,market,selection,selection_side,point,price,book_last_update,book_age_seconds,fetched_at
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,betright,h2h,Sydney Roosters,home,,1.44,2026-09-14T23:32:01.280734,88,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,betright,h2h,Cronulla-Sutherland Sharks,away,,2.8,2026-09-14T23:32:01.280734,88,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,ladbrokes_au,h2h,Sydney Roosters,home,,1.4,2026-09-14T23:32:01.102321,89,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,ladbrokes_au,h2h,Cronulla Sharks,away,,3.0,2026-09-14T23:32:01.102321,89,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,palmerbet,h2h,Sydney Roosters,home,,1.44,2026-09-14T23:32:07.296505,82,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,palmerbet,h2h,Cronulla Sharks,away,,2.82,2026-09-14T23:32:07.296505,82,2026-09-14T23:33:29Z
+f1562698-93f1-446c-bc51-0ca26288c689,2026-09-19T09:30:00Z,Syd Roosters,Cronulla,pointsbetau,h2h,Sydney Roosters,home,,1.42,2026-09-14T23:32:03.133423,87,2026-09-14T23:33:29Z
+
+--- The same team, spelled three different ways by six books ---
+
+$ awk -F, '$6=="h2h"{print $5"\t"$7"\t"$8"\t"$10}' data/nrl_odds.csv | sort
+betright	Cronulla-Sutherland Sharks	away	2.8
+betright	New Zealand Warriors	home	1.51
+betright	Newcastle Knights	away	2.58
+betright	Sydney Roosters	home	1.44
+ladbrokes_au	Cronulla Sharks	away	3.0
+ladbrokes_au	New Zealand Warriors	home	1.48
+ladbrokes_au	Newcastle Knights	away	2.7
+ladbrokes_au	Sydney Roosters	home	1.4
+palmerbet	Cronulla Sharks	away	2.82
+palmerbet	New Zealand Warriors	home	1.51
+palmerbet	Newcastle Knights	away	2.57
+palmerbet	Sydney Roosters	home	1.44
+pointsbetau	Cronulla-Sutherland Sharks	away	2.8
+pointsbetau	New Zealand Warriors	home	1.44
+pointsbetau	Newcastle Knights	away	2.75
+pointsbetau	Sydney Roosters	home	1.42
+sportsbet	Cronulla Sharks	away	2.82
+sportsbet	New Zealand Warriors	home	1.51
+sportsbet	Newcastle Knights	away	2.57
+sportsbet	Sydney Roosters	home	1.44
+tab	Cronulla	away	2.75
+tab	Newcastle	away	2.55
+tab	Syd Roosters	home	1.45
+tab	Warriors	home	1.52
+
+--- Per-book quote age INSIDE ONE RESPONSE (why track.py snapshots) ---
+
+$ awk -F, 'NR>1{print $5, $12"s"}' data/nrl_odds.csv | sort -u
+betright 88s
+ladbrokes_au 89s
+palmerbet 82s
+pointsbetau 87s
+sportsbet 256s
+tab 88s
+
+================================================================
+4. analysis.py -- bookmaker price dispersion
+================================================================
+
+$ python3 analysis.py data/nrl_odds.csv --market h2h
+source        data/nrl_odds.csv
+market        h2h
+comparisons   4 of 4 selection(s) priced by >= 2 book(s), across 2 fixture(s)
+
+Syd Roosters  vs  Cronulla
+  kicks off 2026-09-19T09:30:00Z
+  market   line   side       best book             worst book           spread% oldest
+  h2h      -      away       3.00 ladbrokes_au      2.75 tab              9.09%     4m
+  h2h      -      home       1.45 tab               1.40 ladbrokes_au     3.57%     4m
+
+New Zealand Warriors  vs  Newcastle Knights
+  kicks off 2026-09-20T06:05:00Z
+  market   line   side       best book             worst book           spread% oldest
+  h2h      -      away       2.75 pointsbetau       2.55 tab              7.84%     4m
+  h2h      -      home       1.52 tab               1.44 pointsbetau      5.56%     4m
+
+Widest disagreement: 9.09% on the h2h away selection (Syd Roosters vs Cronulla, 6 books).
+
+Spread % is (best / worst - 1) * 100 across the books that priced the selection.
+It describes disagreement in the feed at one moment. Check the `oldest` column
+before reading anything into a wide number -- a stale quote widens the gap on its own.
+
+$ python3 analysis.py data/nrl_odds.csv --market spreads
+source        data/nrl_odds.csv
+market        spreads
+comparisons   4 of 8 selection(s) priced by >= 2 book(s), across 2 fixture(s)
+skipped       4 selection(s) priced by only one book
+
+Syd Roosters  vs  Cronulla
+  kicks off 2026-09-19T09:30:00Z
+  market   line   side       best book             worst book           spread% oldest
+  spreads  -7.5   home       1.90 tab               1.80 pointsbetau      5.56%    88s
+  spreads  7.5    away       2.00 pointsbetau       1.90 tab              5.26%    88s
+
+New Zealand Warriors  vs  Newcastle Knights
+  kicks off 2026-09-20T06:05:00Z
+  market   line   side       best book             worst book           spread% oldest
+  spreads  -5.5   home       1.85 tab               1.84 sportsbet        0.54%     4m
+  spreads  5.5    away       1.97 sportsbet         1.95 tab              1.03%     4m
+
+Widest disagreement: 5.56% on the spreads home selection (Syd Roosters vs Cronulla, line -7.5, 2 books).
+
+Spread % is (best / worst - 1) * 100 across the books that priced the selection.
+It describes disagreement in the feed at one moment. Check the `oldest` column
+before reading anything into a wide number -- a stale quote widens the gap on its own.
+
+$ python3 analysis.py data/nrl_odds.csv --market totals
+source        data/nrl_odds.csv
+market        totals
+comparisons   4 of 8 selection(s) priced by >= 2 book(s), across 2 fixture(s)
+skipped       4 selection(s) priced by only one book
+
+Syd Roosters  vs  Cronulla
+  kicks off 2026-09-19T09:30:00Z
+  market   line   side       best book             worst book           spread% oldest
+  totals   45.5   over       1.90 pointsbetau       1.90 pointsbetau      0.00%     4m
+  totals   45.5   under      1.90 pointsbetau       1.89 sportsbet        0.53%     4m
+
+New Zealand Warriors  vs  Newcastle Knights
+  kicks off 2026-09-20T06:05:00Z
+  market   line   side       best book             worst book           spread% oldest
+  totals   44.5   over       1.90 pointsbetau       1.90 pointsbetau      0.00%     4m
+  totals   44.5   under      1.90 pointsbetau       1.90 pointsbetau      0.00%     4m
+
+Widest disagreement: 0.53% on the totals under selection (Syd Roosters vs Cronulla, line 45.5, 3 books).
+
+Spread % is (best / worst - 1) * 100 across the books that priced the selection.
+It describes disagreement in the feed at one moment. Check the `oldest` column
+before reading anything into a wide number -- a stale quote widens the gap on its own.
+
+================================================================
+5. track.py -- 9 snapshots, 100 seconds apart, appended to one CSV
+================================================================
+
+(This run takes 13 minutes of wall clock. It was executed earlier in the same
+ session and its transcript is reproduced verbatim here; every other command in
+ this file ran in one pass. NRL h2h carries no Draw selection, so the later
+ three-way fix below does not affect this output.)
+
+$ python3 track.py --markets h2h,spreads,totals --interval 100 --count 9
+snapshot 1/9
+  2026-09-14T23:18:14Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    first snapshot -- baseline recorded, nothing to compare against yet
+snapshot 2/9
+  2026-09-14T23:19:54Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 3/9
+  2026-09-14T23:21:34Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 4/9
+  2026-09-14T23:23:14Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 5/9
+  2026-09-14T23:24:54Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 6/9
+  2026-09-14T23:26:35Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 7/9
+  2026-09-14T23:28:15Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 8/9
+  2026-09-14T23:29:55Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+snapshot 9/9
+  2026-09-14T23:31:35Z  +52 rows  (/v1/sports/nrl/odds?markets=h2h,spreads,totals, cost 3)
+    no price changes since the previous snapshot
+
+0 price change(s) recorded this run. Appended to data/nrl_history.csv
+Inspect with: python3 track.py --summary
+
+$ python3 track.py --summary
+history file    data/nrl_history.csv
+rows            468
+snapshots       9
+price series    52  (distinct event_id+bookmaker+market+selection_side+point)
+price changes   0 observed between consecutive snapshots
+first snapshot  2026-09-14T23:18:14Z
+last snapshot   2026-09-14T23:31:35Z
+snapshot gaps   min 100s / median 100s / max 101s  (a large max means the tracker was not running)
+
+--- Zero changes in 13 minutes. The hosted feed shows why: NRL fixtures
+--- four days out move on an hourly scale, not a per-minute one.
+
+$ python3 track.py --movements
+hosted change feed  /v1/sports/nrl/odds/movements  (cost 5 credits)
+window              last 24 hours (API default)
+changes returned    16
+
+New Zealand Warriors vs Newcastle Knights  --  betright
+  2026-09-14T22:12:38 -> 2026-09-14T22:22:47
+    away_price   2.72 -> 2.58  (-0.14, firming)
+    home_price   1.46 -> 1.51  (+0.05, drifting)
+
+New Zealand Warriors vs Newcastle Knights  --  pointsbetau
+  2026-09-14T00:42:01 -> 2026-09-14T00:52:14
+    home_price   1.46 -> 1.48  (+0.02, drifting)
+
+New Zealand Warriors vs Newcastle Knights  --  pointsbetau
+  2026-09-14T02:38:02 -> 2026-09-14T02:48:11
+    home_price   1.48 -> 1.46  (-0.02, firming)
+
+New Zealand Warriors vs Newcastle Knights  --  pointsbetau
+  2026-09-14T07:19:34 -> 2026-09-14T07:29:43
+    away_price   2.65 -> 2.6  (-0.05, firming)
+    home_price   1.46 -> 1.5  (+0.04, drifting)
+
+New Zealand Warriors vs Newcastle Knights  --  pointsbetau
+  2026-09-14T08:00:12 -> 2026-09-14T08:10:36
+    away_price   2.6 -> 2.7  (+0.10, drifting)
+    home_price   1.5 -> 1.46  (-0.04, firming)
+
+New Zealand Warriors vs Newcastle Knights  --  pointsbetau
+  2026-09-14T08:20:46 -> 2026-09-14T08:30:53
+    away_price   2.7 -> 2.75  (+0.05, drifting)
+    home_price   1.46 -> 1.44  (-0.02, firming)
+
+New Zealand Warriors vs Newcastle Knights  --  tab
+  2026-09-14T22:02:30 -> 2026-09-14T22:12:38
+    away_price   2.6 -> 2.55  (-0.05, firming)
+    home_price   1.5 -> 1.52  (+0.02, drifting)
+
+Syd Roosters vs Cronulla  --  betright
+  2026-09-14T00:42:01 -> 2026-09-14T00:52:14
+    away_price   2.8 -> 2.75  (-0.05, firming)
+    home_price   1.44 -> 1.45  (+0.01, drifting)
+
+Syd Roosters vs Cronulla  --  betright
+  2026-09-14T02:38:02 -> 2026-09-14T02:48:11
+    away_price   2.75 -> 2.8  (+0.05, drifting)
+    home_price   1.45 -> 1.44  (-0.01, firming)
+
+Syd Roosters vs Cronulla  --  betright
+  2026-09-14T03:08:40 -> 2026-09-14T03:18:49
+    away_price   2.8 -> 2.75  (-0.05, firming)
+    home_price   1.44 -> 1.45  (+0.01, drifting)
+
+Syd Roosters vs Cronulla  --  betright
+  2026-09-14T05:13:55 -> 2026-09-14T05:24:08
+    away_price   2.75 -> 2.8  (+0.05, drifting)
+    home_price   1.45 -> 1.44  (-0.01, firming)
+
+Syd Roosters vs Cronulla  --  pointsbetau
+  2026-09-14T00:11:29 -> 2026-09-14T00:21:37
+    away_price   2.95 -> 2.85  (-0.10, firming)
+    home_price   1.38 -> 1.42  (+0.04, drifting)
+
+Syd Roosters vs Cronulla  --  pointsbetau
+  2026-09-14T00:42:01 -> 2026-09-14T00:52:14
+    away_price   2.85 -> 2.65  (-0.20, firming)
+    home_price   1.42 -> 1.46  (+0.04, drifting)
+
+Syd Roosters vs Cronulla  --  pointsbetau
+  2026-09-14T02:38:02 -> 2026-09-14T02:48:11
+    away_price   2.65 -> 2.75  (+0.10, drifting)
+    home_price   1.46 -> 1.44  (-0.02, firming)
+
+Syd Roosters vs Cronulla  --  pointsbetau
+  2026-09-14T03:08:40 -> 2026-09-14T03:18:49
+    away_price   2.75 -> 2.7  (-0.05, firming)
+    home_price   1.44 -> 1.46  (+0.02, drifting)
+
+Syd Roosters vs Cronulla  --  pointsbetau
+  2026-09-14T05:13:55 -> 2026-09-14T05:24:08
+    away_price   2.7 -> 2.8  (+0.10, drifting)
+    home_price   1.46 -> 1.42  (-0.04, firming)
+
+
+================================================================
+6. Errors are RFC 9457 problem+json, surfaced not swallowed
+================================================================
+
+$ PE_API_KEY=pe_live_not_a_real_key python3 fetch_nrl.py
+API error: HTTP 401 Invalid API key
+(exit code 1)
+
+$ python3 fetch_nrl.py --sport not_a_sport
+API error: HTTP 404 Unknown sport_key 'not_a_sport'. Valid sport_keys: afl, aflw, basketball_other, cricket_other, cricket_test, mlb, mma, nba, ncaaf, nfl, nhl, nrl, nrlw, rugby_union, soccer_epl, soccer_other, super_league, tennis_atp, tennis_wta, wnba. See GET /v1/sports.
+(exit code 1)
+
+================================================================
+7. NRLW and Super League use the same code path
+================================================================
+
+Super League is where the two-outcome assumption breaks: sportsbet and
+pointsbetau both return a third h2h selection, 'Draw'. resolve_side() maps
+it to selection_side='draw' rather than leaving it unmatched.
+
+$ python3 fetch_nrl.py --sport nrlw -o data/nrlw.csv
+source        /v1/sports/nrlw/odds?markets=h2h
+credit cost   1
+rows          8
+fixtures      2
+bookmakers    2 (ladbrokes_au, sportsbet)
+markets       h2h=8
+written       data/nrlw.csv
+
+$ python3 fetch_nrl.py --sport super_league -o data/super_league.csv
+source        /v1/sports/super_league/odds?markets=h2h
+credit cost   1
+rows          14
+fixtures      2
+bookmakers    3 (ladbrokes_au, pointsbetau, sportsbet)
+markets       h2h=14
+written       data/super_league.csv
+
+$ python3 analysis.py data/super_league.csv --market h2h
+source        data/super_league.csv
+market        h2h
+comparisons   6 of 6 selection(s) priced by >= 2 book(s), across 2 fixture(s)
+
+Wakefield Trinity Wildcats  vs  Leigh Leopards
+  kicks off 2026-09-18T19:00:00Z
+  market   line   side       best book             worst book           spread% oldest
+  h2h      -      away       2.50 sportsbet         2.38 ladbrokes_au     5.04%    36m
+  h2h      -      draw      17.00 pointsbetau      17.00 pointsbetau      0.00%    36m
+  h2h      -      home       1.57 pointsbetau       1.53 ladbrokes_au     2.71%    36m
+
+Warrington Wolves  vs  Hull Kingston Rovers
+  kicks off 2026-09-19T16:30:00Z
+  market   line   side       best book             worst book           spread% oldest
+  h2h      -      away       2.85 sportsbet         2.75 pointsbetau      3.64%    36m
+  h2h      -      draw      18.00 sportsbet        17.00 pointsbetau      5.88%    36m
+  h2h      -      home       1.44 pointsbetau       1.44 sportsbet        0.31%    36m
+
+Widest disagreement: 5.88% on the h2h draw selection (Warrington Wolves vs Hull Kingston Rovers, 2 books).
+
+Spread % is (best / worst - 1) * 100 across the books that priced the selection.
+It describes disagreement in the feed at one moment. Check the `oldest` column
+before reading anything into a wide number -- a stale quote widens the gap on its own.
+
+================================================================
+8. Measurements quoted in the README
+================================================================
+
+gzip on /v1/sports/nrl/odds?markets=h2h,spreads,totals :
+  identity : 9606 bytes on the wire
+  gzip     : 1151 bytes on the wire
+
+TLS handshake cost, cold connection vs reused connection:
+  cold (new TLS each time) : [240, 210, 215] ms  median 215.0
+  warm (connection reused) : [69, 58, 60, 57] ms  median 60.1
+
+End of captured session.
