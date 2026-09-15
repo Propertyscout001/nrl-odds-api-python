@@ -2,7 +2,7 @@
 """Pull NRL fixtures + bookmaker odds and write one tidy CSV row per price.
 
     python3 fetch_nrl.py --demo                  # no API key needed
-    python3 fetch_nrl.py                         # needs PE_API_KEY
+    python3 fetch_nrl.py                         # needs PUNTERSEDGE_API_KEY
     python3 fetch_nrl.py --markets h2h,spreads,totals -o data/nrl.csv
     python3 fetch_nrl.py --sport nrlw            # nrlw / super_league also work
 

@@ -62,7 +62,14 @@ def test_side_resolution():
 
 
 def test_keyed_shape():
-    """The keyed endpoint returns a BARE ARRAY."""
+    """The keyed endpoint returns a BARE ARRAY.
+
+    The two totals lines below (45.5 and 7.5 from one book, in one market) are
+    not invented for the test -- tab really does send both for the same fixture.
+    See docs/output.txt section 3 for the awk over live data that shows it. That
+    is why `point` is part of track.py's series key. The age_seconds value is a
+    fixture constant and is not a measurement of anything.
+    """
     print("-- flatten_keyed (bare array) --")
     payload = [
         {

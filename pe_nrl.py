@@ -58,9 +58,10 @@ class Client:
     """A tiny keep-alive HTTPS client.
 
     urllib.request opens a fresh TLS connection per call. On this feed a cold
-    connection measured ~226ms against ~61ms on a reused one, so when track.py
-    polls in a loop the handshake dominates. http.client lets us hold the socket
-    open, which is the whole reason this class exists instead of urlopen().
+    connection measured a ~198ms median against ~65ms on a reused one (see
+    docs/output.txt section 8), so when track.py polls in a loop the handshake
+    dominates. http.client lets us hold the socket open, which is the whole
+    reason this class exists instead of urlopen().
     """
 
     def __init__(self, api_key: str = None, timeout: float = 30.0) -> None:
@@ -163,10 +164,21 @@ def _format_problem(status: int, body: str) -> str:
 
 
 def api_key_from_env(required: bool = True):
-    key = os.environ.get("PE_API_KEY", "").strip()
+    """Read the key from the environment.
+
+    PUNTERSEDGE_API_KEY is the name every other repo in this estate uses
+    (puntersedge-python, -node, -mcp, puntersedge-examples,
+    au-racing-odds-dashboard), so it wins. PE_API_KEY is kept as an alias
+    because earlier versions of this repo documented it.
+    """
+    key = (
+        os.environ.get("PUNTERSEDGE_API_KEY")
+        or os.environ.get("PE_API_KEY")
+        or ""
+    ).strip()
     if not key and required:
         sys.stderr.write(
-            "PE_API_KEY is not set.\n"
+            "PUNTERSEDGE_API_KEY is not set (PE_API_KEY is also accepted).\n"
             "  Free key (1,500 credits/month, no card): %s\n"
             "  Or run with --demo for the keyless sample feed.\n" % SIGNUP_URL
         )

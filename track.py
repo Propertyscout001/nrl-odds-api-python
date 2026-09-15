@@ -6,6 +6,11 @@
     python3 track.py --interval 300 --count 12    # 12 snapshots, 5 min apart
     python3 track.py --summary                    # what's in the history file
 
+--demo is a shape demo, not a change detector. The keyless feed reports only the
+BEST book per selection, so when the best book changes the key changes too and a
+new series starts silently instead of a price change being recorded. Only a move
+at the same book is detected. Use a key for real change detection.
+
 Every run APPENDS to data/nrl_history.csv. Nothing is ever rewritten, so the
 file is a log, not a state table: the same (event, bookmaker, market, selection)
 key appears once per snapshot and the price column is what that book was showing
@@ -17,10 +22,10 @@ Why snapshot instead of trusting one fetch
 Two reasons, both measurable in the feed itself.
 
 1. A single response is not a single instant. Each bookmaker block carries its
-   own `age_seconds`. In one live response captured 2026-09-15, sportsbet's
-   NRL market was 2200 seconds old while tab's was 147 seconds old -- both in
-   the same JSON body. Treating those two prices as simultaneous observations
-   is a modelling error. The CSV keeps `book_last_update` and
+   own `age_seconds`. In the live response captured in docs/output.txt, five
+   books were 155-166 seconds old while sportsbet's quote was 395 seconds old
+   -- all in the same JSON body. Treating those prices as simultaneous
+   observations is a modelling error. The CSV keeps `book_last_update` and
    `book_age_seconds` per row so you can filter on observation age rather than
    on when your script happened to run.
 
@@ -50,8 +55,10 @@ import pe_nrl
 DEFAULT_HISTORY = "data/nrl_history.csv"
 
 # What makes one tracked price series. Note that `point` is part of the key:
-# a single bookmaker can return more than one line inside the same market
-# (tab returned totals at both 45.5 and 7.5 in one response), so
+# a single bookmaker can return more than one line inside the same market. In
+# the captured response, tab returned totals at BOTH 45.5 and 7.5 for the same
+# fixture -- four outcomes in one totals block -- while every other book sent
+# only 45.5. See docs/output.txt section 3 for the awk that shows it. So
 # (event, book, market, side) alone is NOT unique.
 KEY_FIELDS = ("event_id", "bookmaker", "market", "selection_side", "point")
 
@@ -66,13 +73,24 @@ def parse_args(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Free API key (1,500 credits/month, no card): " + pe_nrl.SIGNUP_URL,
     )
-    p.add_argument("--demo", action="store_true", help="keyless demo feed (0 credits)")
+    p.add_argument(
+        "--demo",
+        action="store_true",
+        help="keyless demo feed (0 credits). Best-book-only, so a change of best "
+        "bookmaker starts a new series rather than registering as a price "
+        "change -- use a key for real change detection.",
+    )
     p.add_argument("--sport", default="nrl", help="nrl (default), nrlw, super_league")
     p.add_argument("--markets", default="h2h", help="h2h,spreads,totals")
     p.add_argument(
         "--history", default=DEFAULT_HISTORY, help="history CSV (default: %s)" % DEFAULT_HISTORY
     )
-    p.add_argument("--interval", type=float, default=0.0, help="seconds between snapshots")
+    p.add_argument(
+        "--interval",
+        type=float,
+        default=0.0,
+        help="seconds between snapshots (required when --count > 1)",
+    )
     p.add_argument("--count", type=int, default=1, help="number of snapshots to take")
     p.add_argument("--summary", action="store_true", help="describe the history file and exit")
     p.add_argument(
@@ -268,6 +286,17 @@ def main(argv=None):
     args = parse_args(argv)
     if args.summary:
         return describe(args.history)
+
+    if args.count > 1 and args.interval <= 0:
+        # These scripts have no rate-limit backoff by design (see README), so a
+        # back-to-back burst would just trip the per-minute limit and the run
+        # would die at snapshot 1 with an API error. Refuse it up front.
+        sys.stderr.write(
+            "refusing to burst %d requests with --interval 0: the API has a "
+            "per-minute limit\nand this script does not back off. Pass "
+            "--interval (e.g. --interval 60).\n" % args.count
+        )
+        return 2
 
     key = None if args.demo else pe_nrl.api_key_from_env(required=True)
 

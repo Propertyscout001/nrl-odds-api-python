@@ -152,7 +152,7 @@ def main(argv=None):
             "That is the expected result for a --demo CSV. The keyless demo endpoint\n"
             "returns the BEST price per selection, not each book's price, so there is\n"
             "no dispersion in it to measure. Fetch with an API key to compare books:\n"
-            "  export PE_API_KEY=...\n"
+            "  export PUNTERSEDGE_API_KEY=...\n"
             "  python3 fetch_nrl.py --markets h2h -o data/nrl_odds.csv\n"
             "  python3 analysis.py data/nrl_odds.csv\n"
         )
@@ -182,8 +182,16 @@ def main(argv=None):
             spread = (hi["_price"] / lo["_price"] - 1.0) * 100.0 if lo["_price"] else 0.0
             ages = [r["_age"] for r in items if r["_age"] is not None]
             oldest = max(ages) if ages else None
+            # Prices print at 3dp, not 2. At 2dp a 1.4374 and a 1.4419 both
+            # render as "1.44" while the spread column correctly says 0.31%,
+            # and the row reads like a bug. Show enough digits to explain it.
+            worst_book = (
+                "%d books tied" % len(items)
+                if hi["_price"] == lo["_price"]
+                else lo["bookmaker"]
+            )
             print(
-                "  %-8s %-6s %-6s %8.2f %-13s %8.2f %-13s %7.2f%% %6s"
+                "  %-8s %-6s %-6s %8.3f %-13s %8.3f %-13s %7.2f%% %6s"
                 % (
                     market,
                     point if point not in ("", None) else "-",
@@ -191,7 +199,7 @@ def main(argv=None):
                     hi["_price"],
                     hi["bookmaker"],
                     lo["_price"],
-                    lo["bookmaker"],
+                    worst_book,
                     spread,
                     fmt_age(oldest),
                 )
